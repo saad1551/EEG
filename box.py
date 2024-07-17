@@ -6,6 +6,12 @@ from datetime import datetime
 from datetime import date
 from matplotlib.patches import Rectangle
 
+MAX_CHANNELS = 30
+TIME_WINDOW = 5 #seconds
+MIN_RECTANGLE_WIDTH = 0.5
+RECTANGLE_HEIGHT = 0.8
+
+
 def parse_timestamp(timestamp):
     # If timestamp does not contain milliseconds, append ':00'
     if ':' in timestamp and len(timestamp.split(':')) == 3:
@@ -50,31 +56,10 @@ for index, row in df.iterrows():
         "end_idx": raw.time_as_index((parse_timestamp(row['End time']) - parse_timestamp(file_start)).total_seconds())[0] 
     }
     events.append(event)
-    # iterate through the list of channel names
-    # for channel_name in channel_names:
-    #     # make a dictionary of an event
-    #     event = {
-    #         "channel_name": channel_name,
-    #         "start_time": (parse_timestamp(row['Start time']) - parse_timestamp(file_start)).total_seconds(),
-    #         "end_time": (parse_timestamp(row['End time']) - parse_timestamp(file_start)).total_seconds() 
-    #     }
-    #     # add it to the list
-    #     events.append(event)
-
-
-
-# onset = [event['start_time'] for event in events]
-# duration = [(event['end_time'] - event['start_time']) for event in events]
-# description = [' '.join(event['channel_names']) for event in events]
-
-# Define your annotations including channel names
-# annotations = mne.Annotations(onset=onset, duration=duration, description=description)
-
-# raw.set_annotations(annotations)
 
 
 # Plot raw data using MNE's raw.plot() with specified parameters
-fig = raw.plot(duration=5, scalings = 'auto', n_channels=30, block=True, show=False)
+fig = raw.plot(duration=TIME_WINDOW, scalings=dict(eeg=1e-6), n_channels=MAX_CHANNELS, block=True, show=False)
 
 # Access the matplotlib Axes object from the figure
 ax = fig.get_axes()[0]
@@ -82,14 +67,13 @@ ax = fig.get_axes()[0]
 for event in events:
     for channel_idx in event['channel_idxs']:
         # Calculate coordinates and size of the rectangle
-        rect_x = event['start_time'] - 0.1  # x-coordinate (start position)
-        rect_y = channel_idx - 0.4 # center of y-axis minus half of rect_height
-        rect_width = 0.2 + event['end_time'] - event['start_time'] # width of the rectangle
-        rect_height = 0.8  # height of the rectangle
-
+        rect_x = event['start_time'] - (MIN_RECTANGLE_WIDTH / 4)  # x-coordinate (start position)
+        rect_y = channel_idx - (RECTANGLE_HEIGHT / 2) # center of y-axis minus half of rect_height
+        rect_width = MIN_RECTANGLE_WIDTH + event['end_time'] - event['start_time'] # width of the rectangle
+        rect_height = RECTANGLE_HEIGHT  # height of the rectangle
 
         # Create a rectangle patch
-        rect = Rectangle((rect_x, rect_y), rect_width, rect_height, linewidth=1, edgecolor='r', facecolor='none')
+        rect = Rectangle((rect_x, rect_y), rect_width, rect_height, linewidth=1, edgecolor='b', facecolor='none')
 
         # Add the rectangle to the plot
         ax.add_patch(rect)
