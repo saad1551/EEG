@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 from datetime import date
+from matplotlib.patches import Rectangle
 
 def parse_timestamp(timestamp):
     # If timestamp does not contain milliseconds, append ':00'
@@ -26,7 +27,7 @@ raw = mne.io.read_raw_edf("D:/EEGData/raw_data/edf/Abnormal EDF Files/0000137.ed
 channel_mapping = {}
 
 for i in range(len(raw.info['ch_names'])):
-    channel_mapping[raw.info['ch_names'][i]] = i + 1
+    channel_mapping[raw.info['ch_names'][i]] = i
 
 # Load CSV data
 df = pd.read_csv("D:/EEGData/raw_data/csv/SW & SSW CSV Files/137.csv")
@@ -73,13 +74,25 @@ for index, row in df.iterrows():
 
 
 # Plot raw data using MNE's raw.plot() with specified parameters
-fig = raw.plot(duration=5, n_channels=30, block=True, show=False)
+fig = raw.plot(duration=5, scalings = 'auto', n_channels=30, block=True, show=False)
 
 # Access the matplotlib Axes object from the figure
 ax = fig.get_axes()[0]
 
-# Add a vertical line at time = 50 (in seconds)
-ax.axvline(x=50, color='r', linestyle='-')
+for event in events:
+    for channel_idx in event['channel_idxs']:
+        # Calculate coordinates and size of the rectangle
+        rect_x = event['start_time'] - 0.1  # x-coordinate (start position)
+        rect_y = channel_idx - 0.4 # center of y-axis minus half of rect_height
+        rect_width = 0.2 + event['end_time'] - event['start_time'] # width of the rectangle
+        rect_height = 0.8  # height of the rectangle
+
+
+        # Create a rectangle patch
+        rect = Rectangle((rect_x, rect_y), rect_width, rect_height, linewidth=1, edgecolor='r', facecolor='none')
+
+        # Add the rectangle to the plot
+        ax.add_patch(rect)
 
 # Add a text annotation
 ax.text(100, 0, 'Annotation', color='blue', fontsize=12)
