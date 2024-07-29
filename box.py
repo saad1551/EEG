@@ -7,6 +7,7 @@ from datetime import date
 from matplotlib.patches import Rectangle
 import tkinter as tk
 from tkinter import filedialog
+import seaborn as sns
 
 MAX_CHANNELS = 30
 TIME_WINDOW = 5 #seconds
@@ -43,6 +44,9 @@ def process_file(file_path):
 
         # Load CSV data
         df = pd.read_csv(f"D:/EEGData/raw_data/csv/SW & SSW CSV Files/{csv_index}.csv")
+
+        # Calculate the duration of each event
+        df['Duration'] = (df['End time'].apply(parse_timestamp) - df['Start time'].apply(parse_timestamp)).dt.total_seconds()
 
         # Load EEG data
         raw = mne.io.read_raw_edf(file_path, preload=True)
@@ -105,6 +109,33 @@ def process_file(file_path):
 
         ax.set_title('Customized Raw Data Plot')
 
+        plt.show()
+
+        # Visualizations
+        plt.figure(figsize=(10, 6))
+        sns.countplot(data=df, x='Channel names', hue='Comment')
+        plt.title('Number of Events by Channel')
+        plt.xlabel('Channel')
+        plt.ylabel('Number of Events')
+        plt.legend(title='Event Type')
+        plt.show()
+
+        # Box plot: Duration of events by channel
+        plt.figure(figsize=(10, 6))
+        sns.boxplot(data=df, x='Channel names', y='Duration', hue='Comment')
+        plt.title('Duration of Events by Channel')
+        plt.xlabel('Channel')
+        plt.ylabel('Duration (seconds)')
+        plt.legend(title='Event Type')
+        plt.show()
+
+        # Calculate correlation matrix
+        correlation_matrix = df[['Channel names', 'Duration']].apply(pd.to_numeric, errors='coerce').corr()
+
+        # Heatmap: Correlation between event attributes
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+        plt.title('Correlation Matrix of Event Attributes')
         plt.show()
 
     except FileNotFoundError:
