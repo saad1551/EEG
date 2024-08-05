@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 RANDOM_EVENT_STATISTICS_TO_DISPLAY = 10
 FILE_TO_STORE_ALL_EVENT_STATISTICS = "all_files_stats.csv"
+BASE_DIR = "D:/EEGData/raw_data/csv/SW & SSW CSV Files"
 
 def parse_timestamp(timestamp):
     # If timestamp does not contain milliseconds, append ':00'
@@ -23,29 +24,36 @@ def parse_timestamp(timestamp):
     
     return time_obj
 
+# function to show the entry point of the GUI
 def open_file_dialog():
     file_path = filedialog.askopenfilename(title="Select a File", filetypes=[("CSV files", "*.csv")])
     if file_path:
         selected_file_label.config(text=f"Selected File: {file_path}")
         process_file(file_path)
 
+# function to import and process a single CSV file
 def process_file(file_path):
     try:
         df = pd.read_csv(file_path)
 
         file = df.values.tolist()
 
+        # make a set so that there are no duplications of event types
         all_events = set()
 
+        # add events to the set
         for index, row in df.iterrows():
             channel_name = row['Channel names']
             comment = row['Comment']
             all_events.add((channel_name, comment))
 
+        # convert the set back to the events
         events = list(all_events)
 
+        # print the total number of event types found
         print(f"{len(events)} distinct event(s) found in the recording\n\n")
 
+        # loop through events and compute statistics for each event type
         for event in events:
             count = 0
             total_time = 0
@@ -81,41 +89,55 @@ def process_file(file_path):
     except Exception as e:
         selected_file_label.config(text=f"Error: {str(e)}")
 
-def process_all_files(directory="D:/EEGData/raw_data/csv/SW & SSW CSV Files"):
+def process_all_files(directory=BASE_DIR):
     try:
+        # get a list of all the csv files in the directory
         files = os.listdir(directory)
 
+        # empty list to store all the rows in all the csv files
         all_files = []
 
+        # loop through the list of files 
         for file in files:
+            # get the complete path of the file
             file_path = os.path.join(directory, file)
             
-
+            # read the file into a dataframe
             df = pd.read_csv(file_path)
 
+            # add the file to the list containing all the files
             all_files.extend(df.values.tolist())
 
+        # make a set for the events so that event types are not duplicated
         all_events = set()
 
+        # loop through all the rows of the dataset and add the events into the set
         for row in all_files:
             channel_name = row[-2]
             comment = row[-1]
             all_events.add((channel_name, comment))
 
+        # convert events to list
         events = list(all_events)
 
+        # display the total number of event types found in the entire dataset
         print(f"{len(events)} distinct events found in the recordings\n\n")
 
+        # random indices to show statistics of randomly seleted events
         random_indices = np.random.randint(0, len(events), RANDOM_EVENT_STATISTICS_TO_DISPLAY, dtype=int)
 
         print("Individual statistics of 10 randomly selected events computed over the entire dataset are shown below\n\n")
 
+        # dictionary sequence to store the statistics of all events
         event_statistics = []
 
+        # float to store the total duration of all the events
         total_duration_of_all_events = 0
 
+        # list to store the avg duration of all the events
         avg_durations_of_all_events = []
 
+        # loop through the events and compute statistics for each event type
         for index, event in enumerate(events):
             count = 0
             total_time = 0
@@ -165,12 +187,16 @@ def process_all_files(directory="D:/EEGData/raw_data/csv/SW & SSW CSV Files"):
 
         print(f"Average duration of all the events: {round(total_duration_of_all_events / len(all_files), 3)}\n")
 
+        # convert the dictionary sequence to a Pandas dataframe
         df = pd.DataFrame.from_records(event_statistics)
 
+        # write the dataframe to a csv file
         df.to_csv(FILE_TO_STORE_ALL_EVENT_STATISTICS)
 
         print(f"Statistics of all the events saved to file {FILE_TO_STORE_ALL_EVENT_STATISTICS}")
 
+
+        # Plot the histogram of the frequencies of average durations computed over the entire dataset
         plt.figure(figsize=(10, 6))
         plt.hist(avg_durations_of_all_events, bins=10, edgecolor='black')
         plt.title('Histogram of Average Durations for All Abnormalities in the Dataset')
